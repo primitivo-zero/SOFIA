@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Para Sofia</title>
+    <!-- Fuentes vistosas -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&family=Pacifico&display=swap" rel="stylesheet">
+    <!-- Motor de Ajedrez -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+
+    <style>
+        /* Estilos generales y fondo animado */
+        body {
+            margin: 0;
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(-45deg, #ff9a9e, #fecfef, #feada6, #f77062);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+            touch-action: none; /* Evita que la pantalla se mueva al jugar */
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .corazon-flotante {
+            position: absolute;
+            color: rgba(255, 71, 87, 0.8);
+            font-size: 1.5rem;
+            top: -10vh;
+            animation: caer linear forwards;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        @keyframes caer {
+            to { transform: translateY(110vh) rotate(360deg); }
+        }
+
+        .pantalla {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            z-index: 5;
+        }
+
+        .activa { opacity: 1; z-index: 10; transform: scale(1); }
+        .oculta { opacity: 0; z-index: -1; pointer-events: none; transform: scale(0.95); }
+
+        #pantalla-principal {
+            cursor: pointer;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(2px);
+        }
+
+        #pantalla-principal h1 {
+            font-family: 'Fredoka One', cursive;
+            font-size: 4rem;
+            color: #ffffff;
+            text-shadow: 3px 3px 0px #ff4757, 6px 6px 15px rgba(0,0,0,0.3);
+            margin-bottom: 15px;
+            line-height: 1.2;
+        }
+
+        .de-primitivo {
+            font-family: 'Pacifico', cursive;
+            font-size: 2.5rem;
+            color: #ffeb3b;
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.4);
+            display: block;
+            margin-top: -10px;
+        }
+
+        #pantalla-principal p {
+            font-size: 1.5rem;
+            color: #ffffff;
+            font-weight: bold;
+            background: rgba(255, 71, 87, 0.8);
+            padding: 10px 20px;
+            border-radius: 30px;
+            display: inline-block;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            animation: palpitar 1.5s infinite ease-in-out;
+        }
+
+        @keyframes palpitar {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        #pantalla-menu h2 {
+            font-family: 'Fredoka One', cursive;
+            background: linear-gradient(to right, #ffeb3b, #ff4757, #ffffff);
+            -webkit-background-clip: text;
+            color: transparent;
+            margin-bottom: 20px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            text-align: center;
+            padding: 0 15px;
+        }
+
+        .grid-menu {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            width: 95%;
+            max-width: 700px;
+            padding: 10px;
+            max-height: 75vh;
+            overflow-y: auto;
+        }
+
+        .opcion-menu:nth-child(9) {
+            grid-column: span 2;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            font-size: 1.3rem;
+            border: 3px dashed #ff4757;
+        }
+
+        .opcion-menu {
+            background: #ffffff;
+            border: 3px solid #ff758c;
+            border-radius: 20px;
+            padding: 15px 10px;
+            font-family: 'Fredoka One', cursive;
+            font-size: 1rem;
+            color: #ff4757;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #ff758c, 0 10px 15px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+
+        .opcion-menu:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #ff758c;
+        }
+
+        .caja-mensaje {
+            background-color: rgba(255, 255, 255, 0.98);
+            padding: 20px 25px;
+            border-radius: 24px;
+            border: 4px solid #ff9a9e;
+            width: 90%;
+            max-width: 520px;
+            max-height: 90vh;
+            overflow-y: auto;
+            text-align: left;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .caja-mensaje h2 {
+            font-family: 'Fredoka One', cursive;
+            color: #ff4757;
+            margin-top: 0;
+            font-size: 1.6rem;
+            text-align: center;
+            border-bottom: 3px dashed #fecfef;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .caja-mensaje p, .caja-mensaje li {
+            color: #2d3436;
+            font-size: 1.1rem;
+            line-height: 1.5;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        #game-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            background: #f1f2f6;
+            padding: 10px;
+            border-radius: 15px;
+            border: 2px solid #ced6e0;
+            margin: 10px 0;
+        }
+
+        #game-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        #game-title {
+            margin: 0; font-family: 'Fredoka One', cursive; color: #2f3542; font-size: 1.1rem;
+        }
+        #game-info {
+            color: #ff4757; font-weight: bold; font-size: 0.9rem;
+        }
+
+        #gameCanvas {
+            background-color: #2f3542;
+            border-radius: 8px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            border: 3px solid #7bed9f;
+            cursor: pointer;
+            touch-action: none; /* Crucial para detectar toques internos sin hacer scroll */
+            max-width: 100%;
+            height: auto;
+        }
+
+        .game-controls-wrapper {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            width: 100%;
+            max-width: 320px;
+            margin-top: 10px;
+        }
+
+        .d-pad {
+            display: grid; grid-template-columns: 50px 50px 50px; gap: 5px;
+        }
+
+        .btn-game {
+            background: #ff4757; color: white; border: none; border-radius: 10px;
+            font-size: 1.5rem; height: 50px; cursor: pointer;
+            box-shadow: 0 4px 0 #c0392b;
+            display: flex; justify-content: center; align-items: center; user-select: none;
+        }
+        .btn-game:active { transform: translateY(4px); box-shadow: 0 0px 0 #c0392b; }
+
+        .btn-action { background: #2ed573; box-shadow: 0 4px 0 #27ae60; width: 65px; height: 65px; border-radius: 50%; font-size: 2rem; }
+        .btn-action:active { box-shadow: 0 0px 0 #27ae60; }
+
+        .btn-volver {
+            display: block; width: 100%; background: #2ed573; color: white; border: none;
+            padding: 12px; border-radius: 20px; font-family: 'Fredoka One', cursive;
+            font-size: 1.1rem; cursor: pointer; box-shadow: 0 5px 0 #27ae60; text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PANTALLA PRINCIPAL -->
+    <div id="pantalla-principal" class="pantalla activa" onclick="mostrarMenu()">
+        <h1>PARA SOFIA ❤️<br><span class="de-primitivo">DE PRIMITIVO</span></h1>
+        <p>Toca la pantalla para entrar</p>
+    </div>
+
+    <!-- MENÚ -->
+    <div id="pantalla-menu" class="pantalla oculta">
+        <h2>Un rincón especial para ti ✨</h2>
+        <div class="grid-menu">
+            <button class="opcion-menu" onclick="abrirSeccion('sec1')">Mensaje especial</button>
+            <button class="opcion-menu" onclick="abrirSeccion('sec2')">Qué me gusta de ti</button>
+            <button class="opcion-menu" onclick="abrirSeccion('sec3')">Cosas que odio</button>
+            <button class="opcion-menu" onclick="abrirSeccion('sec4')">Cosas que odio pero ya acepté</button>
+            <button class="opcion-menu" onclick="abrirSeccion('sec5')">Cosas a aclarar</button>
+            <button class="opcion-menu" onclick="abrirSeccion('sec6')">Cosas que quiero que cambies</button>
+            <button class="opcion-menu" onclick="abrirSeccion('sec7')">Debes saber que</button>
+            <button class="opcion-menu" onclick="abrirSeccion('sec8')">Tu curso</button>
+            <button class="opcion-menu" onclick="abrirSeccion('sec9')">Cosas que amo de ti ❤️</button>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR DE JUEGOS (Se mueve dinámicamente) -->
+    <div id="game-container">
+        <div id="game-header">
+            <h3 id="game-title">Juego</h3>
+            <span id="game-info">Pts: <span id="game-score">0</span></span>
+        </div>
+        <canvas id="gameCanvas" width="320" height="320"></canvas>
+        <div class="game-controls-wrapper">
+            <div class="d-pad">
+                <div style="grid-column: 2"><button id="btn-up" class="btn-game">⬆️</button></div>
+                <div style="grid-column: 1"><button id="btn-left" class="btn-game">⬅️</button></div>
+                <div style="grid-column: 2"><button id="btn-down" class="btn-game">⬇️</button></div>
+                <div style="grid-column: 3; grid-row: 2"><button id="btn-right" class="btn-game">➡️</button></div>
+            </div>
+            <div>
+                <button id="btn-action" class="btn-game btn-action">🎯</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECCIONES -->
+    <div id="sec1" class="pantalla oculta">
+        <div class="caja-mensaje">
+            <h2>Mensaje especial</h2>
+            <p>Sofi, creo que ya lo sabes, pero la verdad me gusta mucho hacerte sentir especial; me gusta verte sonreír y reír. Sé que a veces me burlo o lanzo comentarios pasivo-agresivos, pero quiero que sepas que no lo hago con la intención de dañarte o hacerte sentir mal, sino que es mi forma de protegerme a mí mismo (ya sabes, los traumas).</p>
+            <p>Pero, aun así, te quiero demasiado. No sé cuándo ni dónde, pero si te digo que te amo es porque ese día sí me sentí amado, fría. Pero, fuera de eso, solo quiero que sepas que te aprecio mucho y eres la única persona en la que confío de verdad, aunque a veces me hagas desconfiar o me abandones.</p>
+            <button class="btn-volver" onclick="volverMenu('sec1')">Volver al menú</button>
+        </div>
+    </div>
+
+    <div id="sec2" class="pantalla oculta">
+        <div class="caja-mensaje">
+            <h2>Qué me gusta de ti</h2>
+            <p>Sofi, tienes que saber todo lo que me gusta de ti. Primero que nada, me gusta tu personalidad, así sin más; me gusta eso. Me gusta tu sonrisa... algo cursi, pero ya sabes, yo bien Romeo.</p>
+            <p>Esto es algo raro de decir, pero me gusta que seas tan natural, así sé que me gusta alguien real y no una capa de químicos concentrada en la cara. Me gusta tu inteligencia; me hace sentir seguro saber que, aunque no pongas atención, eres muy teórica, así que cualquier cosilla teórica a la que le prestes atención te la aprendes en fa.</p>
+            <p>También me encanta, de verdad me encanta, que eres muy chambeadora. Y me fascina cuando estás en modo cariñosa; aunque para eso deba pedir 5 milagros a 3 regiones diferentes, cuando pasa, me encanta.</p>
+            <button class="btn-volver" onclick="volverMenu('sec2')">Volver al menú</button>
+        </div>
+    </div>
+
+    <div id="sec3" class="pantalla oculta">
+        <div class="caja-mensaje">
+            <h2>Cosas que odio</h2>
+            <p>Hay cosas que me molestan, como las arañas y las calabazas, pero una cosa que siempre me hace enojar es que, para que tú seas cariñosa, yo tengo que ser cariñoso primero. Entonces, cada vez que quiero cariñitos, yo tengo que darlos primero.</p>
+            <p>Normalmente no me molesta, pero cuando no estoy de humor y los necesito, simplemente no los tengo porque yo no actúo primero.</p>
+            <button class="btn-volver" onclick="volverMenu('sec3')">Volver al menú</button>
+        </div>
+    </div>
+
+    <div id="sec4" class="pantalla oculta">
+        <div class="caja-mensaje">
+            <h2>Cosas que odio pero ya acepté</h2>
+            <p>La cosa que me da más inseguridad es que me abandones y me puedas cambiar rápido. Ya habíamos hablado de esto, así que ya conoces mi punto de vista.</p>
+            <p>En resumen, ya acepté que en cualquier momento puedo ser cambiado, así que no te preocupes.</p>
+            <button class="btn-volver" onclick="volverMenu('sec4')">Volver al menú</button>
+        </div>
+    </div>
+
+    <div id="sec5" class="pantalla oculta">
+        <div class="caja-mensaje">
+            <h2>Cosas a aclarar</h2>
+            <p>He notado que ya no me muerdes, y creo saber por qué: porque me quejaba mucho, ¿no? Tranquila, la verdad me gustaba, aunque a veces sí te pasabas un poquito.</p>
+            <p>Supongo que es justo que lo hagas, si yo también te doy nalgadas a veces un poco pasadas de lanza.</p>
+            <button class="btn-volver" onclick="volverMenu('sec5')">Volver al menú</button>
+        </div>
+    </div>
+
+    <div id="sec6" class="pantalla oculta">
+        <div class="caja-mensaje">
+            <h2>Cosas que quiero que cambies</h2>
+            <ol>
+                <li>Nada, te quiero tal cual como eres y eso está bien.</li>
+                <li>Que dejes de ser tan fría en persona y más en mensajes, ¿qué es eso de responder 10 mensajes con un "jaja" y dos stickers, maldita?</li>
+            </ol>
+            <button class="btn-volver" onclick="volverMenu('sec6')">Volver al menú</button>
+        </div>
+    </div>
+
+    <div id="sec7" class="pantalla oculta">
+        <div class="caja-mensaje">
+            <h2>Debes saber que</h2>
+            <p>Sabes que te aprecio mucho. Y aunque me gusta consentirte comprándote cosillas, la verdad es que a veces, cuando me sentí mal por algo que hiciste, perdí mucha confianza.</p>
+            <p>Por eso a veces estaba muy grosero y te negaba todo.</p>
+            <button class="btn-volver" onclick="volverMenu('sec7')">Volver al menú</button>
+        </div>
+    </div>
+
+    <div id="sec8" class="pantalla oculta">
+        <div class="caja-mensaje">
+            <h2>Tu curso</h2>
+            <p>Lo odio.</p>
+            <button class="btn-volver" onclick="volverMenu('sec8')">Volver al menú</button>
+        </div>
+    </div>
+
+    <div id="sec9" class="pantalla oculta">
+        <div class="caja-mensaje">
+            <h2>Cosas que amo de ti ❤️</h2>
+            <p style="text-align: center; font-size: 1.6rem; font-family: 'Fredoka One', cursive; color: #e84393; margin-top: 30px; margin-bottom: 30px;">
+                🙏🏻 Tus nalgotas y tus chichotas 🙏🏻
+            </p>
+            <button class="btn-volver" onclick="volverMenu('sec9')">Volver al menú</button>
+        </div>
+    </div>
+
+    <!-- SCRIPT GIGANTE Y MEJORADO -->
+    <script>
+        // EFECTO CORAZONES
+        setInterval(() => {
+            const c = document.createElement('div');
+            c.className = 'corazon-flotante'; c.innerText = '❤️';
+            c.style.left = Math.random() * 100 + 'vw';
+            c.style.animationDuration = (Math.random() * 3 + 2) + 's';
+            document.body.appendChild(c);
+            setTimeout(() => c.remove(), 5000);
+        }, 400);
+
+        // CONFIGURACIÓN DE JUEGOS
+        const mapJuegos = {
+            'sec1': { id:'snake', name:'🐍 Viborita' },
+            'sec2': { id:'pacman', name:'🟡 Pac-Man' },
+            'sec3': { id:'pong', name:'🏓 Pong vs Primitivo' },
+            'sec4': { id:'invaders', name:'👾 Space Invaders' },
+            'sec5': { id:'chess', name:'♟️ Ajedrez vs Primitivo' },
+            'sec6': { id:'dino', name:'🦖 Dino Run' },
+            'sec7': { id:'tetris', name:'🧱 Tetris Real' },
+            'sec8': { id:'rhythm', name:'🎵 Ritmo (Toca la pantalla)' }
+        };
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let currentJuego = null;
+        let gameState = 'MENU'; // MENU, PLAYING, GAMEOVER
+        let score = 0;
+        let ticks = 0;
+        let gData = {}; 
+
+        // CONTROLES CONSISTENTES (PC y Celular)
+        let input = { up: false, down: false, left: false, right: false, action: false };
+        let prevInput = { ...input };
+
+        function justPressed(k) { return input[k] && !prevInput[k]; }
+
+        function bindBtn(id, key) {
+            let btn = document.getElementById(id);
+            if(!btn) return;
+            const setVal = (v, e) => { e.preventDefault(); input[key] = v; };
+            btn.addEventListener('mousedown', e => setVal(true, e));
+            btn.addEventListener('mouseup', e => setVal(false, e));
+            btn.addEventListener('mouseleave', e => setVal(false, e));
+            btn.addEventListener('touchstart', e => setVal(true, e), {passive:false});
+            btn.addEventListener('touchend', e => setVal(false, e), {passive:false});
+        }
+        bindBtn('btn-up', 'up'); bindBtn('btn-down', 'down');
+        bindBtn('btn-left', 'left'); bindBtn('btn-right', 'right');
+        bindBtn('btn-action', 'action');
+
+        window.addEventListener('keydown', e => {
+            if(e.key==='ArrowUp') input.up=true; if(e.key==='ArrowDown') input.down=true;
+            if(e.key==='ArrowLeft') input.left=true; if(e.key==='ArrowRight') input.right=true;
+            if(e.key===' ' || e.key==='Enter') input.action=true;
+        });
+        window.addEventListener('keyup', e => {
+            if(e.key==='ArrowUp') input.up=false; if(e.key==='ArrowDown') input.down=false;
+            if(e.key==='ArrowLeft') input.left=false; if(e.key==='ArrowRight') input.right=false;
+            if(e.key===' ' || e.key==='Enter') input.action=false;
+        });
+
+        // NAVEGACIÓN
+        function mostrarMenu() {
+            document.getElementById('pantalla-principal').className = 'pantalla oculta';
+            document.getElementById('pantalla-menu').className = 'pantalla activa';
+        }
+
+        function abrirSeccion(id) {
+            document.getElementById('pantalla-menu').className = 'pantalla oculta';
+            document.getElementById(id).className = 'pantalla activa';
+
+            const gc = document.getElementById('game-container');
+            if (id === 'sec9') {
+                gc.style.display = 'none'; currentJuego = null;
+            } else {
+                gc.style.display = 'flex';
+                document.getElementById(id).querySelector('.caja-mensaje').insertBefore(gc, document.getElementById(id).querySelector('.btn-volver'));
+                
+                let j = mapJuegos[id];
+                document.getElementById('game-title').innerText = j.name;
+                
+                // Mostrar/Ocultar Info de Puntos/Turno
+                let info = document.getElementById('game-info');
+                if(j.id === 'chess') info.innerText = "Cargando...";
+                else info.innerHTML = 'Pts: <span id="game-score">0</span>';
+
+                iniciarJuegoEscena(j.id);
+            }
+        }
+
+        function volverMenu(id) {
+            currentJuego = null;
+            document.getElementById(id).className = 'pantalla oculta';
+            document.getElementById('pantalla-menu').className = 'pantalla activa';
+        }
+
+        // CONTROL DE ESTADOS DE JUEGO
+        function iniciarJuegoEscena(nombre) {
+            currentJuego = nombre;
+            gameState = 'MENU';
+        }
+
+        function arrancarJuegoLógica() {
+            gameState = 'PLAYING';
+            score = 0;
+            if(document.getElementById('game-score')) document.getElementById('game-score').innerText = 0;
+            
+            if(currentJuego === 'snake') {
+                gData = { snake: [{x:8, y:8}], vx:1, vy:0, food: {x:12, y:8} };
+            } else if(currentJuego === 'pacman') {
+                gData = { px: 7, py: 11, gx: 7, gy: 5, dots: 0, vulnTimer: 0,
+                          map: [
+                            "1111111111111111",
+                            "1300000110000031",
+                            "1011010110101101",
+                            "1000000000000001",
+                            "1011010110101101",
+                            "1000010000100001",
+                            "1111011001101111",
+                            "0001010000101000",
+                            "1111010110101111",
+                            "1000000000000001",
+                            "1011011111101101",
+                            "1301000000001031",
+                            "1101010110101011",
+                            "1000010110100001",
+                            "1011110000111101",
+                            "1111111111111111"
+                          ].map(r => r.split('')) };
+                gData.map.forEach(r => r.forEach(c => { if(c==='0'||c==='3') gData.dots++; }));
+            } else if(currentJuego === 'pong') {
+                gData = { p1y: 130, p2y: 130, bx: 160, by: 160, bvx: 3.5, bvy: 3.5 };
+            } else if(currentJuego === 'invaders') {
+                gData = { ship: 140, bullets: [], aliens: [], dir: 1 };
+                for(let i=0; i<6; i++) for(let j=0; j<4; j++) gData.aliens.push({x: 20+i*40, y: 20+j*30, a: true});
+            } else if(currentJuego === 'chess') {
+                if(typeof Chess !== 'undefined') {
+                    gData.chess = new Chess();
+                    gData.selected = null;
+                    gData.validMoves = [];
+                    document.getElementById('game-info').innerText = "Turno: Blancas";
+                }
+            } else if(currentJuego === 'dino') {
+                gData = { y: 250, vy: 0, gr: true, obs: [] };
+            } else if(currentJuego === 'tetris') {
+                gData = { grid: Array.from({length:16},()=>Array(10).fill(0)), 
+                          cx: 4, cy: 0, 
+                          shapes: [
+                              {c:'#00a8ff', m:[[1,1,1,1]]}, // I
+                              {c:'#9c88ff', m:[[1,0,0],[1,1,1]]}, // J
+                              {c:'#e1b12c', m:[[0,0,1],[1,1,1]]}, // L
+                              {c:'#fbc531', m:[[1,1],[1,1]]}, // O
+                              {c:'#4cd137', m:[[0,1,1],[1,1,0]]}, // S
+                              {c:'#e84118', m:[[0,1,0],[1,1,1]]}, // T
+                              {c:'#c23616', m:[[1,1,0],[0,1,1]]}  // Z
+                          ]};
+                gData.cur = Object.assign({}, gData.shapes[Math.floor(Math.random()*7)]);
+            } else if(currentJuego === 'rhythm') {
+                gData = { notes: [], hitText: '' };
+            }
+        }
+
+        // BUCLE PRINCIPAL (60 FPS)
+        function loop() {
+            ticks++;
+            if(currentJuego) {
+                ctx.fillStyle = '#2f3542';
+                ctx.fillRect(0, 0, 320, 320);
+
+                if(gameState === 'MENU') {
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0,0,320,320);
+                    ctx.fillStyle = 'white'; ctx.font = '24px Fredoka One'; ctx.textAlign = 'center';
+                    ctx.fillText(mapJuegos[Object.keys(mapJuegos).find(k=>mapJuegos[k].id===currentJuego)].name, 160, 140);
+                    ctx.font = '16px Nunito'; ctx.fillText("Toca aquí o usa los botones para iniciar", 160, 180);
+                    
+                    if(justPressed('action') || input.up || input.down || input.left || input.right) {
+                        arrancarJuegoLógica();
+                    }
+                } else if(gameState === 'GAMEOVER') {
+                    ctx.fillStyle = 'rgba(255, 71, 87, 0.8)'; ctx.fillRect(0,0,320,320);
+                    ctx.fillStyle = 'white'; ctx.font = '28px Fredoka One'; ctx.textAlign = 'center';
+                    ctx.fillText("¡Terminó!", 160, 140);
+                    ctx.font = '18px Nunito'; ctx.fillText("Puntos: " + score, 160, 180);
+                    ctx.fillText("Toca para reintentar", 160, 220);
+                    if(justPressed('action')) arrancarJuegoLógica();
+                } else {
+                    juegos[currentJuego]();
+                }
+            }
+            prevInput = { ...input };
+            requestAnimationFrame(loop);
+        }
+
+        // MOTOR DE JUEGOS
+        const juegos = {
+            snake: () => {
+                let d = gData;
+                if(ticks % 15 === 0) { // Más lento
+                    if(input.up && d.vy===0){d.vx=0;d.vy=-1;} if(input.down && d.vy===0){d.vx=0;d.vy=1;}
+                    if(input.left && d.vx===0){d.vx=-1;d.vy=0;} if(input.right && d.vx===0){d.vx=1;d.vy=0;}
+                    
+                    let hx = d.snake[0].x + d.vx, hy = d.snake[0].y + d.vy;
+                    if(hx<0) hx=15; if(hx>15) hx=0; if(hy<0) hy=15; if(hy>15) hy=0;
+                    
+                    if(d.snake.some(s => s.x===hx && s.y===hy)) { gameState = 'GAMEOVER'; return; }
+                    d.snake.unshift({x:hx, y:hy});
+                    if(hx===d.food.x && hy===d.food.y) {
+                        score+=10; document.getElementById('game-score').innerText = score;
+                        d.food = {x: Math.floor(Math.random()*16), y: Math.floor(Math.random()*16)};
+                    } else d.snake.pop();
+                }
+                ctx.fillStyle = '#ff4757'; ctx.fillRect(d.food.x*20+2, d.food.y*20+2, 16, 16);
+                ctx.fillStyle = '#7bed9f'; d.snake.forEach(s => ctx.fillRect(s.x*20+1, s.y*20+1, 18, 18));
+            },
+
+            pacman: () => {
+                let d = gData;
+                if(ticks % 15 === 0) { // Lento
+                    let nx = d.px, ny = d.py;
+                    if(input.up) ny--; if(input.down) ny++; if(input.left) nx--; if(input.right) nx++;
+                    if(nx<0) nx=15; if(nx>15) nx=0; // Túnel
+                    if(d.map[ny] && d.map[ny][nx] !== '1') { d.px = nx; d.py = ny; }
+                    
+                    // Comer
+                    if(d.map[d.py][d.px] === '0') { d.map[d.py][d.px] = '2'; score+=5; d.dots--; }
+                    if(d.map[d.py][d.px] === '3') { d.map[d.py][d.px] = '2'; score+=20; d.vulnTimer = 50; } // Pastilla grande
+                    if(document.getElementById('game-score')) document.getElementById('game-score').innerText = score;
+                    if(d.dots <= 0) gameState = 'GAMEOVER';
+
+                    // Fantasma
+                    if(d.vulnTimer > 0) d.vulnTimer--;
+                    if(Math.random() < (d.vulnTimer>0 ? 0.3 : 0.6)) {
+                        let dirs = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+                        // Si vulnerable, huye o se mueve aleatorio. Si normal, persigue.
+                        let targetX = d.vulnTimer > 0 ? (15 - d.px) : d.px;
+                        let targetY = d.vulnTimer > 0 ? (15 - d.py) : d.py;
+                        
+                        dirs.sort((a,b) => {
+                            let da = Math.abs((d.gx+a.x)-targetX) + Math.abs((d.gy+a.y)-targetY);
+                            let db = Math.abs((d.gx+b.x)-targetX) + Math.abs((d.gy+b.y)-targetY);
+                            return da - db;
+                        });
+                        for(let di of dirs) {
+                            let nGx = d.gx+di.x, nGy = d.gy+di.y;
+                            if(nGx>=0 && nGx<=15 && d.map[nGy] && d.map[nGy][nGx]!=='1') {
+                                d.gx = nGx; d.gy = nGy; break;
+                            }
+                        }
+                    }
+                    // Colisión
+                    if(d.px===d.gx && d.py===d.gy) {
+                        if(d.vulnTimer > 0) { score+=50; d.gx=7; d.gy=5; d.vulnTimer=0; } // Come fantasma
+                        else gameState = 'GAMEOVER';
+                    }
+                }
+                d.map.forEach((r,y) => r.forEach((c,x) => {
+                    if(c==='1'){ ctx.fillStyle='#3742fa'; ctx.fillRect(x*20, y*20, 20, 20); }
+                    if(c==='0'){ ctx.fillStyle='#eccc68'; ctx.fillRect(x*20+8, y*20+8, 4, 4); }
+                    if(c==='3'){ ctx.fillStyle='#ff9ff3'; ctx.beginPath(); ctx.arc(x*20+10, y*20+10, 6, 0, Math.PI*2); ctx.fill(); }
+                }));
+                // Fantasma (Azul si es vulnerable)
+                ctx.fillStyle = d.vulnTimer > 0 ? '#54a0ff' : '#ff4757'; ctx.fillRect(d.gx*20+2, d.gy*20+2, 16, 16);
+                // Pacman
+                ctx.fillStyle = '#eccc68'; ctx.beginPath(); ctx.arc(d.px*20+10, d.py*20+10, 8, 0, Math.PI*2); ctx.fill();
+            },
+
+            pong: () => {
+                let d = gData;
+                if(input.up && d.p1y > 0) d.p1y -= 5;
+                if(input.down && d.p1y < 260) d.p1y += 5;
+                // Bot Primitivo (Lento)
+                if(d.by < d.p2y + 30 && d.p2y > 0) d.p2y -= 3.5; 
+                else if(d.by > d.p2y + 30 && d.p2y < 260) d.p2y += 3.5;
+                
+                d.bx += d.bvx; d.by += d.bvy;
+                if(d.by<=0 || d.by>=310) d.bvy *= -1;
+                
+                if(d.bx <= 20 && d.by > d.p1y && d.by < d.p1y+60) { d.bvx *= -1.05; d.bx = 20; score+=10; document.getElementById('game-score').innerText = score; }
+                if(d.bx >= 290 && d.by > d.p2y && d.by < d.p2y+60) { d.bvx *= -1.05; d.bx = 290; }
+                
+                if(d.bx < 0 || d.bx > 320) gameState = 'GAMEOVER';
+                
+                ctx.fillStyle = 'white'; ctx.fillRect(10, d.p1y, 10, 60); ctx.fillRect(300, d.p2y, 10, 60);
+                ctx.fillRect(d.bx, d.by, 10, 10);
+                ctx.setLineDash([5, 15]); ctx.beginPath(); ctx.moveTo(160,0); ctx.lineTo(160,320); ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.stroke(); ctx.setLineDash([]);
+            },
+
+            invaders: () => {
+                let d = gData;
+                if(input.left && d.ship>0) d.ship -= 4; if(input.right && d.ship<290) d.ship += 4;
+                if(justPressed('action') && d.bullets.length < 3) d.bullets.push({x: d.ship+12, y: 290});
+                
+                d.bullets.forEach(b => b.y -= 7);
+                d.bullets = d.bullets.filter(b => b.y > 0);
+                
+                if(ticks % 45 === 0) { // Movimiento alien más lento
+                    let moveDown = false;
+                    d.aliens.forEach(a => { if(a.a) { a.x += d.dir*15; if(a.x>290 || a.x<10) moveDown=true; }});
+                    if(moveDown) { d.dir*=-1; d.aliens.forEach(a => { if(a.a) a.y+=20; }); }
+                }
+                
+                d.bullets.forEach((b, bi) => {
+                    d.aliens.forEach((a, ai) => {
+                        if(a.a && b.x>a.x && b.x<a.x+20 && b.y>a.y && b.y<a.y+20) {
+                            a.a = false; d.bullets.splice(bi, 1); score+=20; document.getElementById('game-score').innerText = score;
+                        }
+                    });
+                });
+                
+                if(d.aliens.some(a => a.a && a.y > 270) || d.aliens.filter(a=>a.a).length===0) gameState = 'GAMEOVER';
+                
+                ctx.fillStyle = '#7bed9f'; ctx.fillRect(d.ship, 300, 30, 12); 
+                ctx.fillStyle = 'white'; d.bullets.forEach(b => ctx.fillRect(b.x, b.y, 4, 10));
+                ctx.fillStyle = '#ff4757'; d.aliens.forEach(a => { if(a.a) ctx.fillRect(a.x, a.y, 20, 15); });
+            },
+
+            chess: () => {
+                if(!gData.chess) return;
+                const size = 40; // 320 / 8
+                const c = gData.chess;
+                
+                for(let r=0; r<8; r++) {
+                    for(let f=0; f<8; f++) {
+                        let sq = String.fromCharCode(97+f) + (8-r);
+                        ctx.fillStyle = ((r+f)%2===0) ? '#f1f2f6' : '#747d8c';
+                        ctx.fillRect(f*size, r*size, size, size);
+                        
+                        if(gData.selected === sq) { ctx.fillStyle='rgba(255, 234, 167, 0.7)'; ctx.fillRect(f*size, r*size, size, size); }
+                        
+                        // Resaltar movimientos válidos
+                        if(gData.validMoves && gData.validMoves.some(m => m.to === sq)) {
+                            ctx.fillStyle='rgba(46, 213, 115, 0.5)';
+                            ctx.beginPath(); ctx.arc(f*size+20, r*size+20, 8, 0, Math.PI*2); ctx.fill();
+                        }
+                        
+                        let p = c.get(sq);
+                        if(p) {
+                            let uni = {'p':'♟','r':'♜','n':'♞','b':'♝','q':'♛','k':'♚',
+                                       'P':'♙','R':'♖','N':'♘','B':'♗','Q':'♕','K':'♔'}[p.type + (p.color==='w'?'':''.toUpperCase())];
+                            if(p.color === 'w') uni = {'p':'♙','r':'♖','n':'♘','b':'♗','q':'♕','k':'♔'}[p.type];
+                            
+                            ctx.fillStyle = p.color === 'w' ? '#ffffff' : '#000000';
+                            ctx.font = '30px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                            ctx.fillText(uni, f*size + 20, r*size + 22);
+                        }
+                    }
+                }
+            },
+
+            dino: () => {
+                let d = gData;
+                if((input.action || input.up) && d.gr) { d.vy = -12; d.gr = false; }
+                d.vy += 0.6; d.y += d.vy;
+                if(d.y >= 250) { d.y = 250; d.gr = true; d.vy = 0; }
+                
+                if(ticks % 80 === 0 && Math.random()>0.3) d.obs.push({x: 320, w: 20+Math.random()*20, h: 20+Math.random()*20});
+                d.obs.forEach(o => o.x -= 4); // Más lento
+                d.obs = d.obs.filter(o => o.x > -50);
+                
+                d.obs.forEach(o => {
+                    if(30 < o.x+o.w && 50 > o.x && d.y+24 > 270-o.h) gameState = 'GAMEOVER'; 
+                });
+                if(ticks%10===0) { score+=1; document.getElementById('game-score').innerText = score; }
+                
+                ctx.fillStyle = '#7bed9f'; ctx.fillRect(30, d.y, 24, 24); // Dino
+                ctx.fillStyle = '#ff4757'; d.obs.forEach(o => ctx.fillRect(o.x, 274-o.h, o.w, o.h)); // Cactus
+                ctx.fillStyle = '#dfe4ea'; ctx.fillRect(0, 274, 320, 2); // Suelo
+            },
+
+            tetris: () => {
+                let d = gData;
+                
+                // Controles manuales
+                if(justPressed('left') && !tetrisColision(d, -1, 0)) d.cx--;
+                if(justPressed('right') && !tetrisColision(d, 1, 0)) d.cx++;
+                if(justPressed('down') && !tetrisColision(d, 0, 1)) d.cy++;
+                
+                // Rotación
+                if(justPressed('up') || justPressed('action')) {
+                    let m = d.cur.m;
+                    let rot = m[0].map((val, idx) => m.map(row => row[idx]).reverse());
+                    let oldM = d.cur.m;
+                    d.cur.m = rot;
+                    if(tetrisColision(d, 0, 0)) d.cur.m = oldM; // Deshacer si choca
+                }
+                
+                // Caída automática
+                if(ticks % 40 === 0) {
+                    if(!tetrisColision(d, 0, 1)) d.cy++;
+                    else {
+                        // Bloquear pieza
+                        d.cur.m.forEach((row, y) => row.forEach((val, x) => {
+                            if(val) d.grid[d.cy+y][d.cx+x] = d.cur.c;
+                        }));
+                        // Limpiar líneas completas
+                        let lines = 0;
+                        for(let r=15; r>=0; r--) {
+                            if(d.grid[r].every(v => v !== 0)) {
+                                d.grid.splice(r, 1); d.grid.unshift(Array(10).fill(0));
+                                r++; lines++;
+                            }
+                        }
+                        if(lines>0) { score += lines*100; document.getElementById('game-score').innerText = score; }
+                        
+                        // Nueva pieza
+                        d.cur = Object.assign({}, d.shapes[Math.floor(Math.random()*7)]);
+                        d.cx = 4; d.cy = 0;
+                        if(tetrisColision(d, 0, 0)) gameState = 'GAMEOVER';
+                    }
+                }
+
+                // Dibujar
+                ctx.translate(60, 0); // Centrar el tablero (10*20 = 200px ancho. 320-200 = 120. 120/2 = 60)
+                ctx.fillStyle = '#1e272e'; ctx.fillRect(0, 0, 200, 320); // Tablero fondo
+                
+                d.grid.forEach((r,y) => r.forEach((val,x) => {
+                    if(val !== 0) {
+                        ctx.fillStyle = val; ctx.fillRect(x*20+1, y*20+1, 18, 18);
+                    }
+                }));
+                // Dibujar pieza actual
+                d.cur.m.forEach((row, y) => row.forEach((val, x) => {
+                    if(val) { ctx.fillStyle = d.cur.c; ctx.fillRect((d.cx+x)*20+1, (d.cy+y)*20+1, 18, 18); }
+                }));
+                ctx.translate(-60, 0);
+            },
+
+            rhythm: () => {
+                let d = gData;
+                if(ticks % 50 === 0) d.notes.push({ l: Math.floor(Math.random()*4), y: -20 });
+                d.notes.forEach(n => n.y += 3.5); // Lento
+                
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; ctx.fillRect(0, 260, 320, 40);
+                
+                let colors = ['#ff4757','#2ed573','#1e90ff','#ffa502'];
+                ['left','up','down','right'].forEach((k, i) => {
+                    let rx = 20 + i*80;
+                    ctx.fillStyle = colors[i];
+                    ctx.beginPath(); ctx.arc(rx+20, 280, 18, 0, Math.PI*2); 
+                    if(input[k]) ctx.fill(); else ctx.stroke();
+
+                    // Detectar Hit
+                    if(justPressed(k)) {
+                        let hitIdx = d.notes.findIndex(n => n.l===i && n.y>240 && n.y<300);
+                        if(hitIdx !== -1) { 
+                            d.notes.splice(hitIdx, 1); score+=50; d.hitText="¡Bien!"; 
+                        } else { d.hitText="Fallo"; score=Math.max(0,score-10); }
+                        document.getElementById('game-score').innerText = score;
+                    }
+                });
+                
+                d.notes.forEach(n => {
+                    ctx.fillStyle = colors[n.l];
+                    ctx.beginPath(); ctx.arc(40 + n.l*80, n.y, 14, 0, Math.PI*2); ctx.fill();
+                });
+                
+                if(d.notes.some(n => n.y > 320)) { d.hitText="Falló"; score=Math.max(0,score-10); document.getElementById('game-score').innerText = score; }
+                d.notes = d.notes.filter(n => n.y < 320);
+
+                if(d.hitText) {
+                    ctx.fillStyle='white'; ctx.font='20px Fredoka One'; ctx.textAlign='center';
+                    ctx.fillText(d.hitText, 160, 150);
+                }
+            }
+        };
+
+        function tetrisColision(d, ox, oy) {
+            let choca = false;
+            d.cur.m.forEach((row, y) => row.forEach((val, x) => {
+                if(val) {
+                    let nx = d.cx + x + ox; let ny = d.cy + y + oy;
+                    if(nx < 0 || nx > 9 || ny > 15 || (ny >= 0 && d.grid[ny][nx] !== 0)) choca = true;
+                }
+            }));
+            return choca;
+        }
+
+        // EVENTOS TÁCTILES / MOUSE SOBRE EL CANVAS (Para Ajedrez y Ritmo, o iniciar)
+        canvas.addEventListener('mousedown', handleCanvasTouch);
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleCanvasTouch(e); }, {passive: false});
+
+        function handleCanvasTouch(e) {
+            if(gameState === 'MENU' || gameState === 'GAMEOVER') { arrancarJuegoLógica(); return; }
+            if(gameState !== 'PLAYING') return;
+
+            const rect = canvas.getBoundingClientRect();
+            // Escalar posición real en pantalla vs resolución interna 320x320
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (clientX - rect.left) * scaleX;
+            const y = (clientY - rect.top) * scaleY;
+
+            if(currentJuego === 'chess') {
+                let f = Math.floor(x / 40); let r = Math.floor(y / 40);
+                let sq = String.fromCharCode(97+f) + (8-r);
+                let c = gData.chess;
+
+                if(!gData.selected) {
+                    let p = c.get(sq);
+                    if(p && p.color === 'w') {
+                        gData.selected = sq;
+                        gData.validMoves = c.moves({ square: sq, verbose: true });
+                    }
+                } else {
+                    let move = gData.validMoves.find(m => m.to === sq);
+                    if(move) {
+                        c.move(move.san); document.getElementById('game-info').innerText = "Turno: Primitivo (Pensando...)";
+                        gData.selected = null; gData.validMoves = [];
+                        setTimeout(() => { 
+                            if(!c.game_over()) {
+                                let bMoves = c.moves({verbose: true});
+                                if(bMoves.length > 0) {
+                                    let best = bMoves[Math.floor(Math.random()*bMoves.length)]; // IA Simple
+                                    c.move(best.san);
+                                    document.getElementById('game-info').innerText = "Turno: Blancas";
+                                }
+                            } else {
+                                document.getElementById('game-info').innerText = "¡Jaque Mate o Fin!";
+                            }
+                        }, 600);
+                    } else {
+                        gData.selected = null; gData.validMoves = []; // Deseleccionar
+                    }
+                }
+            } else if(currentJuego === 'rhythm') {
+                // Tocar las columnas
+                let col = Math.floor(x / 80);
+                let mapKeys = ['left','up','down','right'];
+                input[mapKeys[col]] = true; prevInput[mapKeys[col]] = false; // Forzar un "justPressed"
+                setTimeout(() => { input[mapKeys[col]] = false; }, 100);
+            }
+        }
+
+        requestAnimationFrame(loop);
+    </script>
+
+</body>
+</html>
